@@ -1,0 +1,14 @@
+{
+  "sources": [
+    {"name": "非凡影视", "api": "https://api.ffzyapi.com/api.php/provide/vod/?ac=detail&pg={p}", "scope": "normal", "enabled": true},
+    {"name": "量子影视", "api": "https://lzizy1.com/api.php/provide/vod/?ac=detail&pg={p}", "scope": "normal", "enabled": true},
+    {"name": "量子备源", "api": "https://cj.lziapi.com/api.php/provide/vod/?ac=detail&pg={p}", "scope": "normal", "enabled": true},
+    {"name": "红牛影视", "api": "https://hongniuzy2.com/api.php/provide/vod/?ac=detail&pg={p}", "scope": "normal", "enabled": true},
+    {"name": "暴风影视", "api": "https://bfzyapi.com/api.php/provide/vod/?ac=detail&pg={p}", "scope": "normal", "enabled": true},
+    {"name": "无尽影视", "api": "https://api.wujinapi.me/api.php/provide/vod/?ac=detail&pg={p}", "scope": "normal", "enabled": true},
+    {"name": "暴风极速", "api": "https://bjczyapi.com/api.php/provide/vod/?ac=detail&pg={p}", "scope": "normal", "enabled": true},
+    {"name": "天涯影视", "api": "https://tyyszy.com/api.php/provide/vod/?ac=detail&pg={p}", "scope": "normal", "enabled": true},
+    {"name": "Lb成人源", "api": "https://lbapi9.com/api.php/provide/vod/?ac=detail&pg={p}", "scope": "adult", "enabled": true},
+    {"name": "Fh成人源", "api": "http://fhapi9.com/api.php/provide/vod/?ac=detail&pg={p}", "scope": "adult", "enabled": true}
+  ]
+}
