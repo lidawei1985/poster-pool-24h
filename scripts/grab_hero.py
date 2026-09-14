@@ -100,6 +100,43 @@ def search_wikimedia(film, max_n=20):
             break
     return out[:max_n]
 
+def search_tmdb(film, api_key, max_n=20):
+    """TMDB 官方图源：backdrops（横版主视觉，最优质）+ posters。api_key=v3 key。"""
+    if not api_key:
+        return []
+    out, seen = [], set()
+    base = "https://api.themoviedb.org/3"
+    sd = _get_json(base + "/search/movie", params={
+        "api_key": api_key, "query": film, "language": "zh-CN", "include_adult": "false"})
+    results = (sd or {}).get("results") or []
+    if not results:
+        return out
+    movie_id = results[0].get("id")
+    im = _get_json("%s/movie/%s/images" % (base, movie_id), params={
+        "api_key": api_key, "include_image_language": "zh,en,null"})
+    cands = [("backdrop", b) for b in ((im or {}).get("backdrops") or [])]
+    cands += [("poster", p) for p in ((im or {}).get("posters") or [])]
+    for kind, imgt in cands:
+        fp = imgt.get("file_path")
+        if not fp:
+            continue
+        w = int(imgt.get("width", 0) or 0)
+        h = int(imgt.get("height", 0) or 0)
+        title = "tmdb_%s_%s" % (kind, os.path.basename(fp))
+        if looks_bad(title, "TMDB " + kind, title):
+            continue
+        url = "https://image.tmdb.org/t/p/original" + fp
+        if url in seen:
+            continue
+        seen.add(url)
+        out.append({"url": url, "title": title, "desc": "TMDB " + kind,
+                    "width": w, "height": h, "mime": "image/jpeg", "source": "tmdb",
+                    "kind": kind})
+        if len(out) >= max_n:
+            break
+    return out
+
+
 def grab_one(film, out_dir, max_n=20):
     """抓一部影片的高清图。返回 (backdrop_path, poster_path) 或 (None, None)。"""
     film_dir = os.path.join(out_dir, re.sub(r'[\\/:*?"<>|]', "_", film).strip() or "untitled")
