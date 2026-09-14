@@ -105,7 +105,14 @@ def grab_one(film, out_dir, max_n=20):
     film_dir = os.path.join(out_dir, re.sub(r'[\\/:*?"<>|]', "_", film).strip() or "untitled")
     os.makedirs(film_dir, exist_ok=True)
     bd, poster = None, None
-    cands = [c for c in search_wikimedia(film, max_n) if not looks_bad(c["title"], c["desc"], c["url"])]
+    cands = []
+    tmdb_key = os.environ.get("TMDB_API_KEY", "")
+    if tmdb_key:
+        # TMDB 官方图优先（backdrops 1920x1080，最优质横版主视觉）
+        cands += [c for c in search_tmdb(film, tmdb_key, max_n)
+                  if not looks_bad(c["title"], c["desc"], c["title"])]
+    cands += [c for c in search_wikimedia(film, max_n)
+              if not looks_bad(c["title"], c["desc"], c["url"])]
     saved = []
     for c in cands:
         if len(saved) >= 8:
