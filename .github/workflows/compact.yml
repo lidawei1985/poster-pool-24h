@@ -1,0 +1,35 @@
+name: compact-history
+
+# 每月 1 号把二进制图库的提交历史压成单个快照，防止仓库突破 GitHub 体积红线。
+# 与采集共用 concurrency group，保证不会同时跑。
+
+on:
+  schedule:
+    - cron: "30 20 1 * *"   # UTC 20:30 = 北京时间次日凌晨 4:30，避开采集窗口
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: scrape
+  cancel-in-progress: false
+
+jobs:
+  compact:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Squash history into single snapshot
+        run: |
+          git config user.name "pool-bot"
+          git config user.email "actions@users.noreply.github.com"
+          du -sh pools feeds
+          git checkout --orphan fresh
+          git add -A
+          git commit -m "compact: squash history $(date -u '+%Y-%m-%d')"
+          git branch -M fresh main
+          git push -f origin main
+          echo "History compacted. Repo now single-commit snapshot."

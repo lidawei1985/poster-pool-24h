@@ -275,14 +275,17 @@ def main():
             n += 1
         log("source %s(%s): rows=%d scoped=%d" % (src["name"], src["scope"], len(rows), n))
 
-    # ---- 海报下载（质量优先，预算内按时间新的优先） ----
-    downloaded = 0
-    for mode in ("normal", "child", "adult"):
+    # ---- 海报下载（质量优先；child 优先 + 按库保底配额，防 normal 吃光预算） ----
+    budget = {"child": max(30, args.img_batch // 4),
+              "normal": max(30, args.img_batch // 2),
+              "adult": max(30, args.img_batch // 4)}
+    total_downloaded = 0
+    for mode in ("child", "normal", "adult"):
         have = list_pool(mode, "img")
         cand = sorted(catalog[mode].values(), key=lambda x: -x["time"])
-        attempts = 0
+        downloaded, attempts = 0, 0
         for it in cand:
-            if (downloaded >= args.img_batch or attempts >= args.img_batch * 8
+            if (downloaded >= budget[mode] or attempts >= budget[mode] * 8
                     or time.time() > deadline or pool_bytes() > POOL_MAX_BYTES):
                 break
             h = md5name(it["title"])
@@ -291,6 +294,7 @@ def main():
             attempts += 1
             if dl_pool_image(it["pic"], mode, h, "img", max_w=900):
                 downloaded += 1
+        total_downloaded += downloaded
         log("pool %s img total=%d (+%d this round)" % (mode, len(list_pool(mode, "img")), downloaded))
 
     # ---- 横版主视觉小批量尝试 ----
@@ -318,6 +322,15 @@ def main():
                 st["hero_fail"].pop(h, None)
             else:
                 st["hero_fail"][h] = time.time()
+            # TMDB/Wikimedia 高清竖版海报回填 img 库（原来直接删掉，浪费优质源）
+            if poster and md5name(title) not in list_pool(mode, "img"):
+                pdata = open(poster, "rb").read()
+                if max(img_dims(pdata)) >= 1000:
+                    pshrink = shrink_to(pdata, 900)
+                    if pshrink:
+                        with open(os.path.join(POOLS[mode], "img", h + ".jpg"), "wb") as f:
+                            f.write(pshrink)
+                        log("POSTER-BACKFILL [%s] %s OK" % (mode, title))
             st["hero_fail"] = {k: v for k, v in st["hero_fail"].items()
                                if time.time() - v < 30 * 86400}   # 状态瘦身
             for d in (bd, poster):

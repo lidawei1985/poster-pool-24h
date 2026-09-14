@@ -100,19 +100,39 @@ def search_wikimedia(film, max_n=20):
             break
     return out[:max_n]
 
+_THUMB_RE = re.compile(r"第\s*[0-9零一二三四五六七八九十百]+\s*[季部]|[\(\[\{（【][^\)\]\}）】]*[\)\]\}）】]"
+                      r"|\d{4}\s*$|4K|2160p|1080p|高清|蓝光|国语|粤语|日语|更新至|全集|完结|TC\b|HD\b|WEB-?DL", re.I)
+
+def clean_title(film):
+    """源站片名常带「第X季/(2024)/高清」等后缀，直接搜图源命中率低；清洗后再搜。"""
+    s = _THUMB_RE.sub("", film or "").strip(" -_·.:：,，")
+    return s or (film or "").strip()
+
 def search_tmdb(film, api_key, max_n=20):
-    """TMDB 官方图源：backdrops（横版主视觉，最优质）+ posters。api_key=v3 key。"""
+    """TMDB 官方图源：backdrops（横版主视觉，最优质）+ posters。
+    先搜 movie，0 结果再搜 tv（儿童库大量动画剧集在 TMDB 是剧集条目）。"""
     if not api_key:
         return []
     out, seen = [], set()
     base = "https://api.themoviedb.org/3"
+    q = clean_title(film)
+    movie_id, tv_id = None, None
     sd = _get_json(base + "/search/movie", params={
-        "api_key": api_key, "query": film, "language": "zh-CN", "include_adult": "false"})
+        "api_key": api_key, "query": q, "language": "zh-CN", "include_adult": "false"})
     results = (sd or {}).get("results") or []
-    if not results:
+    if results:
+        movie_id = results[0].get("id")
+    if not movie_id:
+        st = _get_json(base + "/search/tv", params={
+            "api_key": api_key, "query": q, "language": "zh-CN", "include_adult": "false"})
+        tres = (st or {}).get("results") or []
+        if tres:
+            tv_id = tres[0].get("id")
+    target = ("movie", movie_id) if movie_id else (("tv", tv_id) if tv_id else None)
+    if not target:
         return out
-    movie_id = results[0].get("id")
-    im = _get_json("%s/movie/%s/images" % (base, movie_id), params={
+    kind, mid = target
+    im = _get_json("%s/%s/%s/images" % (base, kind, mid), params={
         "api_key": api_key, "include_image_language": "zh,en,null"})
     cands = [("backdrop", b) for b in ((im or {}).get("backdrops") or [])]
     cands += [("poster", p) for p in ((im or {}).get("posters") or [])]
